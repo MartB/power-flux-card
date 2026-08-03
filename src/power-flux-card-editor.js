@@ -102,6 +102,12 @@ class PowerFluxCardEditor extends LitElement {
                 if (key === 'diamond_view' && value === true) {
                     newConfig.horizontal_view = false;
                 }
+                if (key === 'force_watt_display' && value === true) {
+                    newConfig.force_kw_display = false;
+                }
+                if (key === 'force_kw_display' && value === true) {
+                    newConfig.force_watt_display = false;
+                }
             }
 
             this._config = newConfig;
@@ -122,6 +128,35 @@ class PowerFluxCardEditor extends LitElement {
         const currentEntities = newConfig.entities || {};
         const newEntities = { ...currentEntities, [key]: "" };
         newConfig.entities = newEntities;
+        this._config = newConfig;
+        fireEvent(this, "config-changed", { config: this._config });
+    }
+
+    // Additional solar sensors (entities.solar_extra), summed together with the primary solar sensor.
+    _addSolarExtra() {
+        const currentEntities = this._config.entities || {};
+        const list = Array.isArray(currentEntities.solar_extra) ? [...currentEntities.solar_extra] : [];
+        list.push("");
+        const newConfig = { ...this._config, entities: { ...currentEntities, solar_extra: list } };
+        this._config = newConfig;
+        fireEvent(this, "config-changed", { config: this._config });
+    }
+
+    _removeSolarExtra(index) {
+        const currentEntities = this._config.entities || {};
+        const list = Array.isArray(currentEntities.solar_extra) ? [...currentEntities.solar_extra] : [];
+        list.splice(index, 1);
+        const newConfig = { ...this._config, entities: { ...currentEntities, solar_extra: list } };
+        this._config = newConfig;
+        fireEvent(this, "config-changed", { config: this._config });
+    }
+
+    _solarExtraChanged(index, ev) {
+        const value = (ev.detail && 'value' in ev.detail) ? ev.detail.value : ev.target.value;
+        const currentEntities = this._config.entities || {};
+        const list = Array.isArray(currentEntities.solar_extra) ? [...currentEntities.solar_extra] : [];
+        list[index] = value || "";
+        const newConfig = { ...this._config, entities: { ...currentEntities, solar_extra: list } };
         this._config = newConfig;
         fireEvent(this, "config-changed", { config: this._config });
     }
@@ -296,6 +331,10 @@ class PowerFluxCardEditor extends LitElement {
         display: block;
         margin-bottom: 12px;
       }
+      /* compensates the text selector's extra reserved helper-text height (84px vs 56px) */
+      ha-selector.tight-label-field {
+        margin-bottom: -16px;
+      }
       .consumer-group {
         padding: 4px 10px;
         border-radius: 8px;
@@ -357,6 +396,15 @@ class PowerFluxCardEditor extends LitElement {
       }
       .clear-entity-btn:hover {
           color: var(--error-color, #db4437);
+      }
+      .add-entity-btn {
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: bold;
+          color: var(--primary-color);
+          padding: 8px 0;
       }
       .color-picker-row {
           display: flex;
@@ -563,11 +611,36 @@ class PowerFluxCardEditor extends LitElement {
             <h2>${this._localize('editor.solar_section')}</h2>
         </div>
         
-        ${this._renderEntitySelector(entitySelectorSchema, entities.solar, 'solar', this._localize('editor.entity'))}
+        ${this._renderEntitySelector(entitySelectorSchema, entities.solar, 'solar', this._localize('editor.solar_sensor_label'))}
+
+        ${(entities.solar_extra || []).map((val, i) => html`
+        <div class="entity-picker-wrapper">
+            <ha-selector
+                .hass=${this.hass}
+                .selector=${entitySelectorSchema}
+                .value=${val || ""}
+                .label=${this._localize('editor.solar_extra_label')}
+                @value-changed=${(ev) => this._solarExtraChanged(i, ev)}
+            ></ha-selector>
+            <ha-icon
+                class="clear-entity-btn"
+                icon="mdi:close-circle"
+                @click=${() => this._removeSolarExtra(i)}
+            ></ha-icon>
+        </div>
+        `)}
+
+        <div class="add-entity-btn" @click=${() => this._addSolarExtra()}>
+            <ha-icon icon="mdi:plus-circle-outline"></ha-icon> ${this._localize('editor.add_solar_sensor')}
+        </div>
+        <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px;">
+            ${this._localize('editor.solar_extra_hint')}
+        </div>
         
         <div class="separator"></div>
 
         <ha-selector
+            class="tight-label-field"
             .hass=${this.hass}
             .selector=${textSelectorSchema}
             .value=${this._config.solar_label}
@@ -644,6 +717,7 @@ class PowerFluxCardEditor extends LitElement {
         <div class="separator"></div>
 
         <ha-selector
+            class="tight-label-field"
             .hass=${this.hass}
             .selector=${textSelectorSchema}
             .value=${this._config.grid_label}
@@ -667,8 +741,20 @@ class PowerFluxCardEditor extends LitElement {
 
         <div class="color-row-title">${this._localize('editor.export_color')}</div>
         ${this._renderColorPickerQuint('color_export', 'color_pipe_export', 'color_text_export', 'color_icon_export', 'color_secondary_export', '#ff3333')}
-        <div style="font-size: 0.8em; color: var(--secondary-text-color);">
+        <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-bottom:10px;">
             ${this._localize('editor.export_color_hint')}
+        </div>
+
+        <ha-selector
+            .hass=${this.hass}
+            .selector=${iconSelectorSchema}
+            .value=${this._config.export_icon}
+            .configValue=${'export_icon'}
+            .label=${this._localize('editor.export_icon') + " (Optional)"}
+            @value-changed=${this._valueChanged}
+        ></ha-selector>
+        <div style="font-size: 0.8em; color: var(--secondary-text-color);">
+            ${this._localize('editor.export_icon_hint')}
         </div>
 
         <div class="separator"></div>
@@ -732,6 +818,7 @@ class PowerFluxCardEditor extends LitElement {
         <div class="separator"></div>
 
         <ha-selector
+            class="tight-label-field"
             .hass=${this.hass}
             .selector=${textSelectorSchema}
             .value=${this._config.battery_label}
@@ -956,7 +1043,25 @@ class PowerFluxCardEditor extends LitElement {
             <div class="option-group-title"><ha-icon icon="mdi:pipe"></ha-icon> ${this._localize('editor.group_pipes')}</div>
             ${this._renderSwitch('hide_inactive_flows', 'editor.hide_inactive', this._config.hide_inactive_flows !== false)}
             ${this._renderSwitch('show_consumer_always', 'editor.show_consumer_always', this._config.show_consumer_always === true)}
+            ${this._renderSwitch('show_producer_always', 'editor.show_producer_always', this._config.show_producer_always !== false)}
+            ${this._config.show_producer_always === false ? html`
+            <ha-selector
+                .hass=${this.hass}
+                .selector=${{ number: { min: 0, max: 100, step: 1, mode: "slider" } }}
+                .value=${this._config.battery_hide_soc_threshold !== undefined ? this._config.battery_hide_soc_threshold : 0}
+                .configValue=${'battery_hide_soc_threshold'}
+                .label=${this._localize('editor.battery_hide_soc_threshold')}
+                @value-changed=${this._valueChanged}
+            ></ha-selector>
+            <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: -4px; margin-bottom: 4px;">
+                ${this._localize('editor.battery_hide_soc_threshold_hint')}
+            </div>` : ''}
             ${this._renderSwitch('hide_consumer_icons', 'editor.hide_consumer_icons', this._config.hide_consumer_icons === true)}
+            ${this._renderSwitch('force_watt_display', 'editor.force_watt_display', this._config.force_watt_display === true)}
+            ${this._renderSwitch('force_kw_display', 'editor.force_kw_display', this._config.force_kw_display === true)}
+            <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px;">
+                ${this._localize('editor.force_unit_display_hint')}
+            </div>
         </div>
 
         <div class="option-group">

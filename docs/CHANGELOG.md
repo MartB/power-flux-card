@@ -1,5 +1,20 @@
 # Changelog
 
+## v_2.8
+
+### Fixed
+- **Export-Textfarbe im Balkensegment der kompakten Ansicht (PR #79, thanks to @smoki3):** Der Wert im Export-Segment war fest auf weiße Schrift kodiert, unabhängig von der konfigurierten Farbe. Er nutzt jetzt wie Solar, Netz und Batterie die eingestellte Text-Farbe (`color_text_export`).
+
+### Added
+- **Mehrere Solaranlagen:** Unter Solar/PV lässt sich per „Weitere Solaranlage hinzufügen" beliebig viele zusätzliche Solar-Sensoren (`entities.solar_extra`) hinterlegen, z. B. für mehrere Wechselrichter. Alle konfigurierten Solar-Sensoren werden addiert und als ein gemeinsamer Solarwert dargestellt (Standard-, Horizontal-, Diamant- und kompakte Ansicht). Betrifft nur die Leistungsanzeige, Klick/Mehr-Info öffnet weiterhin den ersten konfigurierten Sensor.
+- **Eigenes Icon für Export:** Neues Feld „Icon für Export" im Netz-Tab des Editors (`export_icon`). Ersetzt das feste `mdi:arrow-right-box` in der oberen/unteren Klammer sowie im Detail-Icon der kompakten Ansicht durch ein frei wählbares Icon. Ohne Angabe bleibt das bisherige Standard-Icon erhalten, bestehende Konfigurationen sehen daher unverändert aus.
+- **Einheit für alle Werte erzwingen:** Zwei neue Schalter „Alle Werte in Watt anzeigen" (`force_watt_display`) und „Alle Werte in kW anzeigen" (`force_kw_display`) in der Editor-Gruppe „Röhren & Verbraucher". Damit lässt sich die Anzeige durchgängig auf eine Einheit festlegen, unabhängig vom Wert. Beide Schalter schließen sich gegenseitig aus. Sind beide deaktiviert, bleibt es bei der bisherigen automatischen Darstellung (bis 1000 W in Watt, darüber in kW).
+- **Erzeuger bei null Watt anzeigen:** Neuer Schalter (`show_producer_always`) direkt unter „Verbraucher bei null Watt anzeigen" in der Editor-Gruppe „Röhren & Verbraucher". Ist er deaktiviert, werden Solar und Netz ausgeblendet, sobald sie auf 0 W zurückfallen — analog zum bestehenden Verhalten der Verbraucher. Standardmäßig aktiviert, damit sich am bisherigen Verhalten bestehender Konfigurationen nichts ändert. Für die Batterie erscheint bei deaktiviertem Schalter zusätzlich ein Slider „Batterie ausblenden unter Ladestand (%)" (`battery_hide_soc_threshold`) — da im Batterie-Node der Ladestand angezeigt wird und die Leistung je nach Lade-/Entladerichtung positiv oder negativ sein kann, richtet sich das Ausblenden hier nach dem SOC statt nach der Wattzahl. Der Slider ist nur sichtbar, solange „Erzeuger bei null Watt anzeigen" ausgeschaltet ist.
+
+### Changed
+- **Version auf v_2.8 angehoben** (Konsolen-Banner).
+- **Feldbezeichnung im Solar-Tab korrigiert:** Das Entitätsfeld hieß fälschlich „Kombinierter Batterie Sensor (W)" (kopiert aus dem Batterie-Tab) und heißt jetzt korrekt „Solar-Sensor (W)".
+
 ## v_2.7
 
 ### Fixed

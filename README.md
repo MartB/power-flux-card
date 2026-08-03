@@ -79,6 +79,7 @@ You can configure the card directly via the visual editor in Home Assistant.
 - **Solar**: Power generation (W).
 - **Grid**: Grid power (W). Positive = Import, Negative = Export (or separate entities).
 - **Battery**: Battery power (W) and State of Charge (%).
+- **Hide at zero watts**: Optional switch (`show_producer_always`) to hide the Solar and Grid bubbles once they fall back to 0 W, the same way idle consumers already disappear. Enabled by default so existing dashboards keep showing all of them at all times. For the battery, disabling the switch reveals a slider (`battery_hide_soc_threshold`) to hide it below a chosen charge level (%) instead — since the battery node shows the SOC and its power can swing positive/negative around zero.
 
 **Additional Consumers:**
 - You can add up to 5 individual consumers (e.g., Car, Heater, Pool) with custom icons and labels.

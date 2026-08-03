@@ -81,6 +81,7 @@ Du kannst die Karte direkt über den visuellen Editor in Home Assistant konfigur
 - **Solar**: Erzeugung (W).
 - **Netz**: Netzleistung (W). Positiv = Import, Negativ = Export (oder separate Entitäten).
 - **Batterie**: Batterieleistung (W) und Ladestand (%).
+- **Bei null Watt ausblenden**: Optionaler Schalter (`show_producer_always`), um Solar und Netz auszublenden, sobald sie auf 0 W zurückfallen — analog zu inaktiven Verbrauchern. Standardmäßig aktiviert, damit bestehende Dashboards weiterhin alles dauerhaft anzeigen. Für die Batterie erscheint bei deaktiviertem Schalter stattdessen ein Slider (`battery_hide_soc_threshold`), um sie unterhalb eines bestimmten Ladestands (%) auszublenden — da im Batterie-Node der Ladestand angezeigt wird und die Leistung je nach Richtung positiv oder negativ sein kann.
 
 **Zusätzliche Verbraucher:**
 - Du kannst bis zu 5 individuelle Verbraucher (z.B. Auto, Heizung, Pool) mit eigenen Icons und Beschriftungen hinzufügen.

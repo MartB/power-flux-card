@@ -54,6 +54,13 @@ const lang_de = {
     "editor.tinted_background": "Farbiger Hintergrund in Kreisen",
     "editor.colored_values": "Farbige Textwerte",
     "editor.hide_consumer_icons": "Icons unten ausblenden",
+    "editor.force_watt_display": "Alle Werte in Watt anzeigen",
+    "editor.force_kw_display": "Alle Werte in kW anzeigen",
+    "editor.force_unit_display_hint": "Standardmäßig werden Werte bis 1000 W in Watt und darüber in kW angezeigt. Mit diesen Schaltern kann stattdessen durchgängig eine Einheit erzwungen werden. Ist keiner der beiden aktiv, gilt die Standard-Darstellung.",
+    "editor.solar_sensor_label": "Solar-Sensor (W)",
+    "editor.solar_extra_label": "Weiterer Solar-Sensor (W)",
+    "editor.add_solar_sensor": "Weitere Solaranlage hinzufügen",
+    "editor.solar_extra_hint": "Für Anlagen mit mehreren Solar-Wechselrichtern: Über \"Weitere Solaranlage hinzufügen\" lassen sich beliebig viele zusätzliche Solar-Sensoren hinterlegen. Alle Sensoren werden addiert und als ein gemeinsamer Solarwert dargestellt.",
     "editor.invert_consumer": "Sensorwert invertieren (+/-)",
     "editor.invert_grid": "Wert umkehren (+/-)",
     "editor.secondary_sensor": "Zweiter Sensor (nur Anzeige)",
@@ -67,8 +74,13 @@ const lang_de = {
     "editor.pipe_color": "Pipe",
     "editor.export_color": "↑ Einspeisung / Export",
     "editor.export_color_hint": "Bubble färbt den Netz-Kreis beim Einspeisen, Pipe die Export-Röhre, Text den Wert, Icon das Symbol und Secondary die Beschriftung in der Detailliste der kompakten Ansicht. Alle folgen der Bubble-Farbe, solange sie nicht eigens gesetzt sind. Hinweis: Bubble wirkt in der kompakten Ansicht nur, wenn „Einspeisung in den Balken aufnehmen\" aktiv ist.",
+    "editor.export_icon": "Icon für Export",
+    "editor.export_icon_hint": "Überschreibt das Standard-Icon (mdi:arrow-right-box) für die Export-Klammer und das Detail-Icon in der kompakten Ansicht.",
     "editor.consumer_unit_kw": "Sensor meldet in kW",
     "editor.show_consumer_always": "Verbraucher bei null Watt anzeigen",
+    "editor.show_producer_always": "Erzeuger bei null Watt anzeigen",
+    "editor.battery_hide_soc_threshold": "Batterie ausblenden unter Ladestand (%)",
+    "editor.battery_hide_soc_threshold_hint": "Die Batterie wird ausgeblendet, sobald der Ladestand auf oder unter diesen Wert fällt.",
     "editor.battery_charge_sensor": "Batterie-Ladung Sensor (W, Optional)",
     "editor.battery_discharge_sensor": "Batterie-Entladung Sensor (W, Optional)",
     "editor.battery_separate_hint": "Optional: Separate Sensoren für Laden/Entladen. Überschreiben den Hauptsensor für die Berechnung.",
@@ -155,6 +167,13 @@ const lang_en = {
     "editor.tinted_background": "Tinted Background in Bubbles",
     "editor.colored_values": "Colored Text Values",
     "editor.hide_consumer_icons": "Hide Consumer Icons",
+    "editor.force_watt_display": "Always show values in Watt",
+    "editor.force_kw_display": "Always show values in kW",
+    "editor.force_unit_display_hint": "By default values up to 1000 W are shown in Watt and above in kW. These switches let you force a single unit throughout instead. If neither is enabled, the default behavior applies.",
+    "editor.solar_sensor_label": "Solar Sensor (W)",
+    "editor.solar_extra_label": "Additional Solar Sensor (W)",
+    "editor.add_solar_sensor": "Add another solar system",
+    "editor.solar_extra_hint": "For setups with multiple solar inverters: use \"Add another solar system\" to configure as many additional solar sensors as needed. All sensors are summed and shown as a single combined solar value.",
     "editor.invert_consumer": "Invert Sensor Value (+/-)",
     "editor.invert_grid": "Invert Power Value (+/-)",
     "editor.secondary_sensor": "Secondary Sensor (display only)",
@@ -168,8 +187,13 @@ const lang_en = {
     "editor.pipe_color": "Pipe Color",
     "editor.export_color": "↑ Export",
     "editor.export_color_hint": "Bubble colors the grid node while exporting, Pipe the export pipe, Text the value, Icon the symbol and Secondary the label in the compact view details list. All follow the bubble color until set explicitly. Note: Bubble only shows in the compact view when \"Include export in the bar\" is enabled.",
+    "editor.export_icon": "Export icon",
+    "editor.export_icon_hint": "Overrides the default icon (mdi:arrow-right-box) used for the export bracket and the compact-view detail icon.",
     "editor.consumer_unit_kw": "Sensor reports in kW",
     "editor.show_consumer_always": "Show Consumers at zero watts",
+    "editor.show_producer_always": "Show Producers at zero watts",
+    "editor.battery_hide_soc_threshold": "Hide battery below charge level (%)",
+    "editor.battery_hide_soc_threshold_hint": "The battery is hidden once its charge level drops to or below this value.",
     "editor.battery_charge_sensor": "Battery Charge Sensor (W, Optional)",
     "editor.battery_discharge_sensor": "Battery Discharge Sensor (W, Optional)",
     "editor.battery_separate_hint": "Optional: Separate sensors for charge/discharge. Override the main sensor for calculations.",
@@ -316,6 +340,12 @@ class PowerFluxCardEditor extends LitElement {
                 if (key === 'diamond_view' && value === true) {
                     newConfig.horizontal_view = false;
                 }
+                if (key === 'force_watt_display' && value === true) {
+                    newConfig.force_kw_display = false;
+                }
+                if (key === 'force_kw_display' && value === true) {
+                    newConfig.force_watt_display = false;
+                }
             }
 
             this._config = newConfig;
@@ -336,6 +366,35 @@ class PowerFluxCardEditor extends LitElement {
         const currentEntities = newConfig.entities || {};
         const newEntities = { ...currentEntities, [key]: "" };
         newConfig.entities = newEntities;
+        this._config = newConfig;
+        fireEvent(this, "config-changed", { config: this._config });
+    }
+
+    // Additional solar sensors (entities.solar_extra), summed together with the primary solar sensor.
+    _addSolarExtra() {
+        const currentEntities = this._config.entities || {};
+        const list = Array.isArray(currentEntities.solar_extra) ? [...currentEntities.solar_extra] : [];
+        list.push("");
+        const newConfig = { ...this._config, entities: { ...currentEntities, solar_extra: list } };
+        this._config = newConfig;
+        fireEvent(this, "config-changed", { config: this._config });
+    }
+
+    _removeSolarExtra(index) {
+        const currentEntities = this._config.entities || {};
+        const list = Array.isArray(currentEntities.solar_extra) ? [...currentEntities.solar_extra] : [];
+        list.splice(index, 1);
+        const newConfig = { ...this._config, entities: { ...currentEntities, solar_extra: list } };
+        this._config = newConfig;
+        fireEvent(this, "config-changed", { config: this._config });
+    }
+
+    _solarExtraChanged(index, ev) {
+        const value = (ev.detail && 'value' in ev.detail) ? ev.detail.value : ev.target.value;
+        const currentEntities = this._config.entities || {};
+        const list = Array.isArray(currentEntities.solar_extra) ? [...currentEntities.solar_extra] : [];
+        list[index] = value || "";
+        const newConfig = { ...this._config, entities: { ...currentEntities, solar_extra: list } };
         this._config = newConfig;
         fireEvent(this, "config-changed", { config: this._config });
     }
@@ -510,6 +569,10 @@ class PowerFluxCardEditor extends LitElement {
         display: block;
         margin-bottom: 12px;
       }
+      /* compensates the text selector's extra reserved helper-text height (84px vs 56px) */
+      ha-selector.tight-label-field {
+        margin-bottom: -16px;
+      }
       .consumer-group {
         padding: 4px 10px;
         border-radius: 8px;
@@ -571,6 +634,15 @@ class PowerFluxCardEditor extends LitElement {
       }
       .clear-entity-btn:hover {
           color: var(--error-color, #db4437);
+      }
+      .add-entity-btn {
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: bold;
+          color: var(--primary-color);
+          padding: 8px 0;
       }
       .color-picker-row {
           display: flex;
@@ -777,11 +849,36 @@ class PowerFluxCardEditor extends LitElement {
             <h2>${this._localize('editor.solar_section')}</h2>
         </div>
         
-        ${this._renderEntitySelector(entitySelectorSchema, entities.solar, 'solar', this._localize('editor.entity'))}
+        ${this._renderEntitySelector(entitySelectorSchema, entities.solar, 'solar', this._localize('editor.solar_sensor_label'))}
+
+        ${(entities.solar_extra || []).map((val, i) => html`
+        <div class="entity-picker-wrapper">
+            <ha-selector
+                .hass=${this.hass}
+                .selector=${entitySelectorSchema}
+                .value=${val || ""}
+                .label=${this._localize('editor.solar_extra_label')}
+                @value-changed=${(ev) => this._solarExtraChanged(i, ev)}
+            ></ha-selector>
+            <ha-icon
+                class="clear-entity-btn"
+                icon="mdi:close-circle"
+                @click=${() => this._removeSolarExtra(i)}
+            ></ha-icon>
+        </div>
+        `)}
+
+        <div class="add-entity-btn" @click=${() => this._addSolarExtra()}>
+            <ha-icon icon="mdi:plus-circle-outline"></ha-icon> ${this._localize('editor.add_solar_sensor')}
+        </div>
+        <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px;">
+            ${this._localize('editor.solar_extra_hint')}
+        </div>
         
         <div class="separator"></div>
 
         <ha-selector
+            class="tight-label-field"
             .hass=${this.hass}
             .selector=${textSelectorSchema}
             .value=${this._config.solar_label}
@@ -858,6 +955,7 @@ class PowerFluxCardEditor extends LitElement {
         <div class="separator"></div>
 
         <ha-selector
+            class="tight-label-field"
             .hass=${this.hass}
             .selector=${textSelectorSchema}
             .value=${this._config.grid_label}
@@ -881,8 +979,20 @@ class PowerFluxCardEditor extends LitElement {
 
         <div class="color-row-title">${this._localize('editor.export_color')}</div>
         ${this._renderColorPickerQuint('color_export', 'color_pipe_export', 'color_text_export', 'color_icon_export', 'color_secondary_export', '#ff3333')}
-        <div style="font-size: 0.8em; color: var(--secondary-text-color);">
+        <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-bottom:10px;">
             ${this._localize('editor.export_color_hint')}
+        </div>
+
+        <ha-selector
+            .hass=${this.hass}
+            .selector=${iconSelectorSchema}
+            .value=${this._config.export_icon}
+            .configValue=${'export_icon'}
+            .label=${this._localize('editor.export_icon') + " (Optional)"}
+            @value-changed=${this._valueChanged}
+        ></ha-selector>
+        <div style="font-size: 0.8em; color: var(--secondary-text-color);">
+            ${this._localize('editor.export_icon_hint')}
         </div>
 
         <div class="separator"></div>
@@ -946,6 +1056,7 @@ class PowerFluxCardEditor extends LitElement {
         <div class="separator"></div>
 
         <ha-selector
+            class="tight-label-field"
             .hass=${this.hass}
             .selector=${textSelectorSchema}
             .value=${this._config.battery_label}
@@ -1170,7 +1281,25 @@ class PowerFluxCardEditor extends LitElement {
             <div class="option-group-title"><ha-icon icon="mdi:pipe"></ha-icon> ${this._localize('editor.group_pipes')}</div>
             ${this._renderSwitch('hide_inactive_flows', 'editor.hide_inactive', this._config.hide_inactive_flows !== false)}
             ${this._renderSwitch('show_consumer_always', 'editor.show_consumer_always', this._config.show_consumer_always === true)}
+            ${this._renderSwitch('show_producer_always', 'editor.show_producer_always', this._config.show_producer_always !== false)}
+            ${this._config.show_producer_always === false ? html`
+            <ha-selector
+                .hass=${this.hass}
+                .selector=${{ number: { min: 0, max: 100, step: 1, mode: "slider" } }}
+                .value=${this._config.battery_hide_soc_threshold !== undefined ? this._config.battery_hide_soc_threshold : 0}
+                .configValue=${'battery_hide_soc_threshold'}
+                .label=${this._localize('editor.battery_hide_soc_threshold')}
+                @value-changed=${this._valueChanged}
+            ></ha-selector>
+            <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: -4px; margin-bottom: 4px;">
+                ${this._localize('editor.battery_hide_soc_threshold_hint')}
+            </div>` : ''}
             ${this._renderSwitch('hide_consumer_icons', 'editor.hide_consumer_icons', this._config.hide_consumer_icons === true)}
+            ${this._renderSwitch('force_watt_display', 'editor.force_watt_display', this._config.force_watt_display === true)}
+            ${this._renderSwitch('force_kw_display', 'editor.force_kw_display', this._config.force_kw_display === true)}
+            <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px;">
+                ${this._localize('editor.force_unit_display_hint')}
+            </div>
         </div>
 
         <div class="option-group">
@@ -1201,7 +1330,7 @@ customElements.define("power-flux-card-editor", PowerFluxCardEditor);
 
 
 console.log(
-  "%c⚡ Power Flux Card v_2.7 ready",
+  "%c⚡ Power Flux Card v_2.8 ready",
   "background: #d19525ff; color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold;"
 );
 
@@ -1249,6 +1378,8 @@ console.log(
         consumer_2_unit_kw: false,
         consumer_3_unit_kw: false,
         show_consumer_always: false,
+        show_producer_always: true,
+        battery_hide_soc_threshold: 0,
         consumer_1_hide_pipe: false,
         consumer_1_pipe_threshold: 0,
         consumer_2_hide_pipe: false,
@@ -1861,8 +1992,42 @@ console.log(
       return html``;
     }
 
+    // Sums the primary solar sensor plus any additional solar sensors configured under entities.solar_extra.
+    // solar_unit_kw is applied uniformly to all of them (mixed units are not supported).
+    _getSolarTotal(entities) {
+      const unitKw = this.config.solar_unit_kw === true;
+      const factor = unitKw ? 1000 : 1;
+      const getVal = (entity) => {
+        const state = this.hass.states[entity];
+        return state ? parseFloat(state.state) || 0 : 0;
+      };
+      let total = entities.solar ? getVal(entities.solar) * factor : 0;
+      if (Array.isArray(entities.solar_extra)) {
+        entities.solar_extra.forEach(id => {
+          if (id) total += getVal(id) * factor;
+        });
+      }
+      return total;
+    }
+
+    // First configured solar entity (primary, falling back to the first extra sensor), used for click/more-info.
+    _getPrimarySolarEntity(entities) {
+      if (entities.solar) return entities.solar;
+      if (Array.isArray(entities.solar_extra)) {
+        const found = entities.solar_extra.find(id => !!id);
+        if (found) return found;
+      }
+      return null;
+    }
+
     _formatPower(val) {
       if (val === 0) return "0";
+      if (this.config.force_watt_display === true) {
+        return Math.round(val) + " W";
+      }
+      if (this.config.force_kw_display === true) {
+        return (val / 1000).toFixed(1) + " kW";
+      }
       if (Math.abs(val) >= 1000) {
         return (val / 1000).toFixed(1) + " kW";
       }
@@ -1964,7 +2129,7 @@ console.log(
         return getVal(entity) * (unitKw ? 1000 : 1);
       };
 
-      const solar = entities.solar ? Math.max(0, getValUnit(entities.solar, this.config.solar_unit_kw === true)) : 0;
+      const solar = Math.max(0, this._getSolarTotal(entities));
       const hasGridCombined = !!(entities.grid_combined && entities.grid_combined !== "");
       const gridSign = this.config.invert_grid ? -1 : 1;
       const gridCombinedVal = hasGridCombined ? getValUnit(entities.grid_combined, this.config.grid_unit_kw === true) * gridSign : 0;
@@ -2183,7 +2348,7 @@ console.log(
         if (type === 'solar') return { icon: 'mdi:weather-sunny', color: colSolar.icon, pipe: colSolar.pipe };
         if (type === 'grid') return { icon: 'mdi:transmission-tower', color: colGrid.icon, pipe: colGrid.pipe };
         if (type === 'battery') return { icon: 'mdi:battery-high', color: battDischarge.icon, pipe: battDischarge.pipe };
-        if (type === 'export') return { icon: 'mdi:arrow-right-box', color: colExport.icon, pipe: colExport.pipe };
+        if (type === 'export') return { icon: this.config.export_icon || 'mdi:arrow-right-box', color: colExport.icon, pipe: colExport.pipe };
         return { icon: '', color: '', pipe: '' };
       };
 
@@ -2232,7 +2397,7 @@ console.log(
         let pipeColor = '';
 
         if (type === 'house') { icon = 'mdi:home'; iconColor = colHouse.icon; pipeColor = colHouse.pipe; }
-        if (type === 'export') { icon = 'mdi:arrow-right-box'; iconColor = colExport.icon; pipeColor = colExport.pipe; }
+        if (type === 'export') { icon = this.config.export_icon || 'mdi:arrow-right-box'; iconColor = colExport.icon; pipeColor = colExport.pipe; }
         if (type === 'battery') { icon = 'mdi:battery-charging-high'; iconColor = battCharge.icon; pipeColor = battCharge.pipe; }
         if (iconOverride) { icon = iconOverride; }
         if (iconColorOverride) { iconColor = iconColorOverride; pipeColor = pipeColorOverride || iconColorOverride; }
@@ -2302,7 +2467,7 @@ console.log(
                         const textColor = s.type === 'solar' && this.config.color_text_solar ? colSolar.text
                           : s.type === 'grid' && this.config.color_text_grid ? colGrid.text
                           : s.type === 'battery' && this.config.color_text_battery_discharge ? battDischarge.text
-                          : s.type === 'export' && this.config.color_export ? 'white'
+                          : s.type === 'export' && this.config.color_export ? colExport.text
                           : 'black';
                         return html`
                         <div class="bar-segment"
@@ -2335,7 +2500,7 @@ console.log(
                     <div class="compact-details-column">
                         <div class="compact-details-header">${this._localize('card.label_in')}</div>
                         ${solar > 0 ? html`
-                        <div class="compact-detail-item" @click=${() => entities.solar && this._handleClick(entities.solar)} style="cursor: ${entities.solar ? 'pointer' : 'default'};">
+                        <div class="compact-detail-item" @click=${() => this._getPrimarySolarEntity(entities) && this._handleClick(this._getPrimarySolarEntity(entities))} style="cursor: ${this._getPrimarySolarEntity(entities) ? 'pointer' : 'default'};">
                             <ha-icon icon="mdi:weather-sunny" style="color: ${colSolar.icon};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${colSolar.secondary};">${labelSolar}</span>
                             <span class="compact-detail-value" style="color: ${colSolar.text};">${this._formatPower(solar)}</span>
@@ -2376,7 +2541,7 @@ console.log(
                         </div>`)}
                         ${gridExport > 0 ? html`
                         <div class="compact-detail-item" @click=${() => (entities.grid_combined || entities.grid_export || entities.grid) && this._handleClick(entities.grid_combined || entities.grid_export || entities.grid)} style="cursor: ${(entities.grid_combined || entities.grid_export || entities.grid) ? 'pointer' : 'default'};">
-                            <ha-icon icon="mdi:arrow-right-box" style="color: ${colExport.icon};"></ha-icon>
+                            <ha-icon icon="${this.config.export_icon || 'mdi:arrow-right-box'}" style="color: ${colExport.icon};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${colExport.secondary};">${labelExport}</span>
                             <span class="compact-detail-value" style="color: ${colExport.text};">${this._formatPower(gridExport)}</span>
                         </div>` : ''}
@@ -2472,7 +2637,7 @@ console.log(
       const hasSecondaryBattery = !!(entities.secondary_battery && entities.secondary_battery !== "");
       
       // Determine existence of main entities
-      const hasSolar = !!(entities.solar && entities.solar !== "");
+      const hasSolar = !!(entities.solar && entities.solar !== "") || (Array.isArray(entities.solar_extra) && entities.solar_extra.some(id => !!id));
       const hasGridCombined = !!(entities.grid_combined && entities.grid_combined !== "");
       const hasGrid = !!(entities.grid && entities.grid !== "") || hasGridCombined;
       const hasBattery = !!(entities.battery && entities.battery !== "");
@@ -2527,7 +2692,7 @@ console.log(
       const { show: showC5, pipeActive: c5PipeActive } = consumerVisibility(5, c5Val);
       const anyBottomVisible = showC1 || showC2 || showC3 || showC4 || showC5;
 
-      const solar = hasSolar ? getValKw(entities.solar, this.config.solar_unit_kw === true) : 0;
+      const solar = hasSolar ? this._getSolarTotal(entities) : 0;
       const gridSign = this.config.invert_grid ? -1 : 1;
       const gridCombinedVal = hasGridCombined ? getValKw(entities.grid_combined, this.config.grid_unit_kw === true) * gridSign : 0;
       const gridMain = hasGridCombined ? gridCombinedVal : (hasGrid ? getValKw(entities.grid, this.config.grid_unit_kw === true) * gridSign : 0);
@@ -2699,6 +2864,20 @@ console.log(
       const isSolarActive = Math.round(solarVal) > 0;
       const isGridActive = Math.round(gridImport) > 0 || Math.round(gridExport) > 0;
       const isGridExporting = Math.round(gridExport) > 0 && Math.round(gridImport) === 0;
+      // Battery visibility follows the SOC (shown in the box) rather than watts, since
+      // charge/discharge power can swing positive/negative around zero while idle.
+      const hasBatterySoc = !!(entities.battery_soc && entities.battery_soc !== "");
+      const batteryHideSocThreshold = this.config.battery_hide_soc_threshold || 0;
+      const isBatteryActive = hasBatterySoc
+        ? Math.round(battSoc) > batteryHideSocThreshold
+        : (Math.round(batteryCharge) > 0 || Math.round(batteryDischarge) > 0);
+
+      // Producer visibility: defaults to always-on (backward compatible), can be toggled off
+      // so Solar/Grid/Battery bubbles disappear at 0 W just like consumers already do.
+      const alwaysShowProducer = this.config.show_producer_always !== false;
+      const showSolarBubble = hasSolar && (alwaysShowProducer || isSolarActive);
+      const showGridBubble = hasGrid && (alwaysShowProducer || isGridActive);
+      const showBatteryBubble = hasBattery && (alwaysShowProducer || isBatteryActive);
 
       // --- Grid Donut Gradient ---
       let gridGradientVal = '';
@@ -2992,15 +3171,15 @@ console.log(
 
                 </svg>
 
-                ${hasSolar ? html`
+                ${showSolarBubble ? html`
                 <div class="bubble ${shapeClass} ${isSolarActive ? 'solar' : 'inactive'} ${nodeClass('solar')} ${tintClass} ${isSolarActive ? glowClass : ''}"
-                    @click=${() => this._handleClick(entities.solar)}>
+                    @click=${() => this._handleClick(this._getPrimarySolarEntity(entities))}>
                     ${renderMainIcon('solar', solarVal, iconSolar, solarColor)}
                     ${renderSecondaryOrLabel(labelSolarText, showLabelSolar, entities.secondary_solar, hasSecondarySolar, 'secondary_solar')}
                     <div class="value" style="${isSolarActive ? (this.config.color_text_solar ? 'color: var(--text-solar-color);' : getColorStyle('--neon-yellow')) : `color: ${solarColor};`}">${this._formatPower(solarVal)}</div>
                 </div>` : ''}
                 
-                ${hasGrid ? html`
+                ${showGridBubble ? html`
                 <div class="bubble ${shapeClass} ${isGridActive ? (isGridExporting ? 'grid exporting' : 'grid') : 'inactive'} ${nodeClass('grid')} ${showDonut && isGridActive ? 'donut' : ''} ${tintClass} ${isGridActive ? glowClass : ''}"
                     style="${showDonut && isGridActive ? `--grid-gradient: ${gridGradientVal};` : ''}"
                     @click=${() => this._handleClick(entities.grid_combined || entities.grid)}>
@@ -3012,7 +3191,7 @@ console.log(
                     </div>
                 </div>` : ''}
                 
-                ${hasBattery ? html`
+                ${showBatteryBubble ? html`
                 <div class="bubble ${shapeClass} battery ${nodeClass('battery')} ${tintClass} ${glowClass}"
                     @click=${() => this._handleClick(entities.battery)}>
                     ${renderMainIcon('battery', battSoc, iconBattery)}
