@@ -1831,6 +1831,16 @@ console.log(
         border-radius: 12px;
         background: color-mix(in srgb, var(--primary-text-color, #fff) 5%, transparent);
       }
+      /* One label colour for every row: the per-entity secondary colours only exist for some
+         entities, which left the labels in mismatched greys */
+      .modern .compact-detail-label {
+        color: var(--primary-text-color) !important;
+        opacity: 0.85;
+      }
+      .modern .compact-detail-secondary {
+        color: var(--secondary-text-color);
+        opacity: 1;
+      }
       .modern .compact-detail-value {
         font-weight: 600;
         font-variant-numeric: tabular-nums;
