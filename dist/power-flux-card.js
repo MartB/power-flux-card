@@ -19,6 +19,10 @@ const lang_de = {
     "editor.group_compact": "Kompakte Ansicht (evcc)",
     "editor.compact_view_enable": "Kompakte Ansicht aktivieren",
     "editor.compact_glow": "Neon Glow in kompakter Ansicht",
+    "editor.compact_modern": "Moderner Stil",
+    "editor.compact_show_soc": "Ladestand an der Batterie anzeigen",
+    "editor.grid_deadband": "Netz-Totband (W)",
+    "editor.grid_deadband_hint": "Netzleistung unterhalb dieses Werts gilt als null, damit ein ausgeglichenes Netz nicht ständig zwischen Bezug und Einspeisung wechselt.",
     "editor.compact_icons_in_bracket": "Icons in die Klammern setzen",
     "editor.compact_icons_in_bracket_hint": "Aus: Die Icons stehen innerhalb der Klammern, die Klammerlinie läuft durchgehend. An: Die Icons sitzen mittig auf der Klammerlinie und unterbrechen sie.",
     "editor.compact_bar_selfuse": "Einspeisung in den Balken aufnehmen",
@@ -132,6 +136,10 @@ const lang_en = {
     "editor.group_compact": "Compact View (evcc)",
     "editor.compact_view_enable": "Enable Compact View",
     "editor.compact_glow": "Neon Glow in Compact View",
+    "editor.compact_modern": "Modern style",
+    "editor.compact_show_soc": "Show state of charge at the battery",
+    "editor.grid_deadband": "Grid dead band (W)",
+    "editor.grid_deadband_hint": "Grid power below this counts as zero, so a grid held at balance does not flip between import and export.",
     "editor.compact_icons_in_bracket": "Place icons on the bracket line",
     "editor.compact_icons_in_bracket_hint": "Off: the icons sit inside the brackets and the bracket line stays unbroken. On: the icons are centered on the bracket line and interrupt it.",
     "editor.compact_bar_selfuse": "Include export in the bar",
@@ -1295,6 +1303,17 @@ class PowerFluxCardEditor extends LitElement {
                 ${this._localize('editor.battery_hide_soc_threshold_hint')}
             </div>` : ''}
             ${this._renderSwitch('hide_consumer_icons', 'editor.hide_consumer_icons', this._config.hide_consumer_icons === true)}
+            <ha-selector
+                .hass=${this.hass}
+                .selector=${{ number: { min: 0, max: 500, step: 5, mode: "box", unit_of_measurement: "W" } }}
+                .value=${this._config.grid_deadband !== undefined ? this._config.grid_deadband : 0}
+                .configValue=${'grid_deadband'}
+                .label=${this._localize('editor.grid_deadband')}
+                @value-changed=${this._valueChanged}
+            ></ha-selector>
+            <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: -4px; margin-bottom: 4px;">
+                ${this._localize('editor.grid_deadband_hint')}
+            </div>
             ${this._renderSwitch('force_watt_display', 'editor.force_watt_display', this._config.force_watt_display === true)}
             ${this._renderSwitch('force_kw_display', 'editor.force_kw_display', this._config.force_kw_display === true)}
             <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px;">
@@ -1307,6 +1326,8 @@ class PowerFluxCardEditor extends LitElement {
             ${this._renderSwitch('compact_view', 'editor.compact_view_enable', this._config.compact_view === true)}
             ${this._renderSwitch('compact_details', 'editor.compact_details', this._config.compact_details === true)}
             ${this._renderSwitch('compact_glow', 'editor.compact_glow', this._config.compact_glow === true)}
+            ${this._renderSwitch('compact_modern', 'editor.compact_modern', this._config.compact_modern === true)}
+            ${this._renderSwitch('compact_show_soc', 'editor.compact_show_soc', this._config.compact_show_soc === true)}
             ${this._renderSwitch('compact_icons_in_bracket', 'editor.compact_icons_in_bracket', this._config.compact_icons_in_bracket === true)}
             <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px; margin-bottom: 8px;">
                 ${this._localize('editor.compact_icons_in_bracket_hint')}
@@ -1735,6 +1756,86 @@ console.log(
         margin-left: auto;
       }
       
+      .compact-icon-badge {
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: 3px;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .compact-detail-secondary {
+        font-size: 11px;
+        opacity: 0.6;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+      }
+
+      /* --- COMPACT VIEW, MODERN STYLE (compact_modern) --- */
+      .compact-container.modern {
+        padding: 14px 16px 12px;
+      }
+      .modern .compact-bar-wrapper {
+        height: 32px;
+        margin: 6px 0;
+        gap: 3px;
+        border-radius: 12px;
+        background: transparent;
+      }
+      .modern .bar-segment {
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        font-variant-numeric: tabular-nums;
+        background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.06));
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+      .modern .bar-segment:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+      .modern .bar-segment:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+      .modern .bracket-line {
+        stroke-width: 1.25;
+        opacity: 0.5;
+      }
+      .modern .compact-icon-wrapper {
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: var(--ha-card-background, var(--card-background-color, #1c1c1c));
+      }
+      .modern .compact-icon {
+        --mdc-icon-size: 18px;
+      }
+      .modern .compact-details {
+        gap: 10px;
+        margin-top: 8px;
+        padding: 6px 0 0;
+      }
+      .modern .compact-details-column {
+        border-right: none;
+        padding-right: 0;
+        gap: 6px;
+      }
+      .modern .compact-details-header {
+        text-align: left;
+        border-bottom: none;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        opacity: 0.45;
+        margin: 0 0 2px 4px;
+      }
+      .modern .compact-detail-item {
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--primary-text-color, #fff) 5%, transparent);
+      }
+      .modern .compact-detail-value {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
       /* --- STANDARD VIEW STYLES --- */
       .scale-wrapper {
         width: 420px; 
@@ -2020,6 +2121,35 @@ console.log(
       return null;
     }
 
+    // Grid readings below grid_deadband watts count as zero. A grid held at balance hovers a few
+    // watts either side of it, which otherwise flips import and export on every update
+    _applyGridDeadband(gridImport, gridExport) {
+      const band = Math.max(0, parseFloat(this.config.grid_deadband) || 0);
+      return [gridImport < band ? 0 : gridImport, gridExport < band ? 0 : gridExport];
+    }
+
+    // A secondary sensor's state as display text: power through _formatPower, energy with one
+    // decimal, anything non-numeric as it stands
+    _secondaryText(entity) {
+      if (!entity) return '';
+      const state = this.hass.states[entity];
+      if (!state) return '';
+      const val = parseFloat(state.state);
+      const unit = state.attributes.unit_of_measurement || '';
+      if (isNaN(val)) return state.state + (unit ? ' ' + unit : '');
+      if (unit === 'W' || unit === 'Wh') return this._formatPower(val);
+      if (unit === '%') return Math.round(val) + ' %';
+      return val.toFixed(1) + (unit ? ' ' + unit : '');
+    }
+
+    // The battery icon that matches a state of charge, in the 10 % steps mdi provides
+    _batteryIcon(soc, charging) {
+      if (soc === null || soc === undefined || isNaN(soc)) return charging ? 'mdi:battery-charging-high' : 'mdi:battery-high';
+      const step = Math.min(100, Math.max(0, Math.round(soc / 10) * 10));
+      if (charging) return step >= 100 ? 'mdi:battery-charging-100' : step <= 0 ? 'mdi:battery-charging-outline' : `mdi:battery-charging-${step}`;
+      return step >= 100 ? 'mdi:battery' : step <= 0 ? 'mdi:battery-outline' : `mdi:battery-${step}`;
+    }
+
     _formatPower(val) {
       if (val === 0) return "0";
       if (this.config.force_watt_display === true) {
@@ -2178,6 +2308,7 @@ console.log(
         gridImport = gridMain > 0 ? gridMain : 0;
         gridExport = gridMain < 0 ? Math.abs(gridMain) : 0;
       }
+      [gridImport, gridExport] = this._applyGridDeadband(gridImport, gridExport);
 
       // Check for separate battery charge/discharge sensors
       const hasBattChargeSensor = !!(entities.battery_charge && entities.battery_charge !== "");
@@ -2284,7 +2415,7 @@ console.log(
       // 20px icon plus 4px breathing room on either side; the bracket needs room left for its side legs
       const iconGapPx = 28;
       const minIconWidth = iconsInBracket ? 44 : 20;
-      const bracketGap = (width) => (iconsInBracket && width > minIconWidth) ? iconGapPx : 0;
+      const bracketGap = (width, extra = 0) => (iconsInBracket && width > minIconWidth + extra) ? iconGapPx + extra : 0;
 
       // Optional bar mode: show how energy is actually used (self consumption) instead of raw sources
       const selfUseBar = this.config.compact_bar_selfuse === true;
@@ -2292,6 +2423,15 @@ console.log(
       const selfConsum = destHouse + consumerTotal + batteryCharge;
       const selfPV = Math.min(srcSolar, selfConsum);
       const selfBattery = Math.min(srcBattery, Math.max(0, selfConsum - selfPV));
+
+      // State of charge beside the battery icon (compact_show_soc), and secondary sensors in the details
+      const showSoc = this.config.compact_show_soc === true && !!(entities.battery_soc && entities.battery_soc !== "");
+      const soc = showSoc ? getVal(entities.battery_soc) : null;
+      const socText = showSoc ? `${Math.round(soc)} %` : '';
+      // Room the bracket line leaves open around the icon grows by the width of the SoC text
+      const socGapPx = showSoc ? 34 : 0;
+      const secondary = (key) => this._secondaryText(entities[`secondary_${key}`]);
+      const batterySecondary = secondary('battery') || socText;
 
       const threshold = 0.1;
       const measuredWidth = (this._cardWidth && this._cardWidth > 0)
@@ -2347,7 +2487,7 @@ console.log(
       const bracketMeta = (type) => {
         if (type === 'solar') return { icon: 'mdi:weather-sunny', color: colSolar.icon, pipe: colSolar.pipe };
         if (type === 'grid') return { icon: 'mdi:transmission-tower', color: colGrid.icon, pipe: colGrid.pipe };
-        if (type === 'battery') return { icon: 'mdi:battery-high', color: battDischarge.icon, pipe: battDischarge.pipe };
+        if (type === 'battery') return { icon: showSoc ? this._batteryIcon(soc, false) : 'mdi:battery-high', color: battDischarge.icon, pipe: battDischarge.pipe, badge: socText };
         if (type === 'export') return { icon: this.config.export_icon || 'mdi:arrow-right-box', color: colExport.icon, pipe: colExport.pipe };
         return { icon: '', color: '', pipe: '' };
       };
@@ -2362,10 +2502,11 @@ console.log(
           const width = layoutWidth(val, topX);
           if (width <= 0) return;
           const meta = bracketMeta(type);
+          const extra = meta.badge ? socGapPx : 0;
           topBrackets.push({
-            path: this._createBracketPath(topX, width, 'down', bracketGap(width)),
-            width, center: topX + (width / 2),
-            icon: meta.icon, iconColor: meta.color, pipeColor: meta.pipe, val, entityId
+            path: this._createBracketPath(topX, width, 'down', bracketGap(width, extra)),
+            width, center: topX + (width / 2), minWidth: minIconWidth + extra,
+            icon: meta.icon, iconColor: meta.color, pipeColor: meta.pipe, badge: meta.badge || '', val, entityId
           });
           topX += width;
         };
@@ -2375,10 +2516,11 @@ console.log(
       } else {
         topBrackets = barSegments.map(s => {
           const meta = bracketMeta(s.type);
+          const extra = meta.badge ? socGapPx : 0;
           return {
-            path: this._createBracketPath(s.startPx, s.widthPx, 'down', bracketGap(s.widthPx)),
-            width: s.widthPx, center: s.startPx + (s.widthPx / 2),
-            icon: meta.icon, iconColor: meta.color, pipeColor: meta.pipe, val: s.val, entityId: s.entityId
+            path: this._createBracketPath(s.startPx, s.widthPx, 'down', bracketGap(s.widthPx, extra)),
+            width: s.widthPx, center: s.startPx + (s.widthPx / 2), minWidth: minIconWidth + extra,
+            icon: meta.icon, iconColor: meta.color, pipeColor: meta.pipe, badge: meta.badge || '', val: s.val, entityId: s.entityId
           };
         });
       }
@@ -2398,18 +2540,22 @@ console.log(
 
         if (type === 'house') { icon = 'mdi:home'; iconColor = colHouse.icon; pipeColor = colHouse.pipe; }
         if (type === 'export') { icon = this.config.export_icon || 'mdi:arrow-right-box'; iconColor = colExport.icon; pipeColor = colExport.pipe; }
-        if (type === 'battery') { icon = 'mdi:battery-charging-high'; iconColor = battCharge.icon; pipeColor = battCharge.pipe; }
+        let badge = '';
+        if (type === 'battery') { icon = showSoc ? this._batteryIcon(soc, true) : 'mdi:battery-charging-high'; iconColor = battCharge.icon; pipeColor = battCharge.pipe; badge = socText; }
         if (iconOverride) { icon = iconOverride; }
         if (iconColorOverride) { iconColor = iconColorOverride; pipeColor = pipeColorOverride || iconColorOverride; }
 
-        const path = this._createBracketPath(bottomX, width, 'up', bracketGap(width));
+        const extra = badge ? socGapPx : 0;
+        const path = this._createBracketPath(bottomX, width, 'up', bracketGap(width, extra));
         bottomBrackets.push({
           path,
           width: width,
           center: bottomX + (width / 2),
+          minWidth: minIconWidth + extra,
           icon,
           iconColor,
           pipeColor,
+          badge,
           val,
           entityId
         });
@@ -2445,18 +2591,19 @@ console.log(
 
       return html`
         <ha-card>
-            <div class="compact-container">
+            <div class="compact-container ${this.config.compact_modern === true ? 'modern' : ''}">
                 <!-- TOP BRACKETS -->
                 <div class="compact-bracket">
                     <svg class="bracket-svg" width="100%" height="100%">
                         ${topBrackets.map(b => this._renderSVGPath(b.path, b.pipeColor || b.iconColor, compactGlow))}
                     </svg>
-                    ${topBrackets.map(b => b.width > minIconWidth ? html`
+                    ${topBrackets.map(b => b.width > b.minWidth ? html`
                     <div class="compact-icon-wrapper"
                          style="left: ${b.center}px; transform: translateX(-50%); top: ${topIconTop}; cursor: ${b.entityId ? 'pointer' : 'default'};"
                          title="${this._formatPower(b.val)}"
                          @click=${() => b.entityId && this._handleClick(b.entityId)}>
                         <ha-icon icon="${b.icon}" class="compact-icon" style="color: ${b.iconColor}; ${iconGlow(b.iconColor)}"></ha-icon>
+                        ${b.badge ? html`<span class="compact-icon-badge" style="color: ${b.iconColor};">${b.badge}</span>` : ''}
                     </div>` : '')}
                 </div>
 
@@ -2484,12 +2631,13 @@ console.log(
                     <svg class="bracket-svg" width="100%" height="100%">
                         ${bottomBrackets.map(b => this._renderSVGPath(b.path, b.pipeColor || b.iconColor, compactGlow))}
                     </svg>
-                    ${bottomBrackets.map(b => b.width > minIconWidth ? html`
+                    ${bottomBrackets.map(b => b.width > b.minWidth ? html`
                     <div class="compact-icon-wrapper"
                          style="left: ${b.center}px; transform: translateX(-50%); top: ${bottomIconTop}; cursor: ${b.entityId ? 'pointer' : 'default'};"
                          title="${this._formatPower(b.val)}"
                          @click=${() => b.entityId && this._handleClick(b.entityId)}>
                         <ha-icon icon="${b.icon}" class="compact-icon" style="color: ${b.iconColor}; ${iconGlow(b.iconColor)}"></ha-icon>
+                        ${b.badge ? html`<span class="compact-icon-badge" style="color: ${b.iconColor};">${b.badge}</span>` : ''}
                     </div>` : '')}
                 </div>
 
@@ -2503,18 +2651,21 @@ console.log(
                         <div class="compact-detail-item" @click=${() => this._getPrimarySolarEntity(entities) && this._handleClick(this._getPrimarySolarEntity(entities))} style="cursor: ${this._getPrimarySolarEntity(entities) ? 'pointer' : 'default'};">
                             <ha-icon icon="mdi:weather-sunny" style="color: ${colSolar.icon};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${colSolar.secondary};">${labelSolar}</span>
+                            ${secondary('solar') ? html`<span class="compact-detail-secondary">${secondary('solar')}</span>` : ''}
                             <span class="compact-detail-value" style="color: ${colSolar.text};">${this._formatPower(solar)}</span>
                         </div>` : ''}
                         ${gridImport > 0 ? html`
                         <div class="compact-detail-item" @click=${() => (entities.grid_combined || entities.grid) && this._handleClick(entities.grid_combined || entities.grid)} style="cursor: ${(entities.grid_combined || entities.grid) ? 'pointer' : 'default'};">
                             <ha-icon icon="mdi:transmission-tower" style="color: ${colGrid.icon};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${colGrid.secondary};">${labelGrid}</span>
+                            ${secondary('grid') ? html`<span class="compact-detail-secondary">${secondary('grid')}</span>` : ''}
                             <span class="compact-detail-value" style="color: ${colGrid.text};">${this._formatPower(gridImport)}</span>
                         </div>` : ''}
                         ${batteryDischarge > 0 ? html`
                         <div class="compact-detail-item" @click=${() => entities.battery && this._handleClick(entities.battery)} style="cursor: ${entities.battery ? 'pointer' : 'default'};">
                             <ha-icon icon="mdi:battery-arrow-down" style="color: ${battDischarge.icon};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${battDischarge.secondary};">${labelBattery}</span>
+                            ${batterySecondary ? html`<span class="compact-detail-secondary">${batterySecondary}</span>` : ''}
                             <span class="compact-detail-value" style="color: ${battDischarge.text};">${this._formatPower(batteryDischarge)}</span>
                         </div>` : ''}
                     </div>
@@ -2525,18 +2676,21 @@ console.log(
                         <div class="compact-detail-item" @click=${() => entities.house && this._handleClick(entities.house)} style="cursor: ${entities.house ? 'pointer' : 'default'};">
                             <ha-icon icon="mdi:home" style="color: ${colHouse.icon};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${colHouse.secondary};">${labelHouse}</span>
+                            ${secondary('house') ? html`<span class="compact-detail-secondary">${secondary('house')}</span>` : ''}
                             <span class="compact-detail-value" style="color: ${colHouse.text};">${this._formatPower(destHouse)}</span>
                         </div>` : ''}
                         ${batteryCharge > 0 ? html`
                         <div class="compact-detail-item" @click=${() => entities.battery && this._handleClick(entities.battery)} style="cursor: ${entities.battery ? 'pointer' : 'default'};">
                             <ha-icon icon="mdi:battery-arrow-up" style="color: ${battCharge.icon};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${battCharge.secondary};">${labelBattery}</span>
+                            ${batterySecondary ? html`<span class="compact-detail-secondary">${batterySecondary}</span>` : ''}
                             <span class="compact-detail-value" style="color: ${battCharge.text};">${this._formatPower(batteryCharge)}</span>
                         </div>` : ''}
                         ${consumers.filter(c => c.power > 0).map(c => html`
                         <div class="compact-detail-item" @click=${() => c.entityId && this._handleClick(c.entityId)} style="cursor: ${c.entityId ? 'pointer' : 'default'};">
                             <ha-icon icon="${c.icon}" style="color: ${c.iconColor};"></ha-icon>
                             <span class="compact-detail-label" style="color: ${c.secondaryColor};">${c.label}</span>
+                            ${secondary(`consumer_${c.idx}`) ? html`<span class="compact-detail-secondary">${secondary(`consumer_${c.idx}`)}</span>` : ''}
                             <span class="compact-detail-value" style="color: ${c.textColor};">${this._formatPower(c.power)}</span>
                         </div>`)}
                         ${gridExport > 0 ? html`
@@ -2720,6 +2874,7 @@ console.log(
           gridImport = gridMain > 0 ? gridMain : 0;
           gridExport = gridMain < 0 ? Math.abs(gridMain) : 0;
         }
+        [gridImport, gridExport] = this._applyGridDeadband(gridImport, gridExport);
       }
 
       // Check for separate battery charge/discharge sensors

@@ -1057,6 +1057,17 @@ class PowerFluxCardEditor extends LitElement {
                 ${this._localize('editor.battery_hide_soc_threshold_hint')}
             </div>` : ''}
             ${this._renderSwitch('hide_consumer_icons', 'editor.hide_consumer_icons', this._config.hide_consumer_icons === true)}
+            <ha-selector
+                .hass=${this.hass}
+                .selector=${{ number: { min: 0, max: 500, step: 5, mode: "box", unit_of_measurement: "W" } }}
+                .value=${this._config.grid_deadband !== undefined ? this._config.grid_deadband : 0}
+                .configValue=${'grid_deadband'}
+                .label=${this._localize('editor.grid_deadband')}
+                @value-changed=${this._valueChanged}
+            ></ha-selector>
+            <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: -4px; margin-bottom: 4px;">
+                ${this._localize('editor.grid_deadband_hint')}
+            </div>
             ${this._renderSwitch('force_watt_display', 'editor.force_watt_display', this._config.force_watt_display === true)}
             ${this._renderSwitch('force_kw_display', 'editor.force_kw_display', this._config.force_kw_display === true)}
             <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px;">
@@ -1069,6 +1080,8 @@ class PowerFluxCardEditor extends LitElement {
             ${this._renderSwitch('compact_view', 'editor.compact_view_enable', this._config.compact_view === true)}
             ${this._renderSwitch('compact_details', 'editor.compact_details', this._config.compact_details === true)}
             ${this._renderSwitch('compact_glow', 'editor.compact_glow', this._config.compact_glow === true)}
+            ${this._renderSwitch('compact_modern', 'editor.compact_modern', this._config.compact_modern === true)}
+            ${this._renderSwitch('compact_show_soc', 'editor.compact_show_soc', this._config.compact_show_soc === true)}
             ${this._renderSwitch('compact_icons_in_bracket', 'editor.compact_icons_in_bracket', this._config.compact_icons_in_bracket === true)}
             <div style="font-size: 0.8em; color: var(--secondary-text-color); margin-top: 4px; margin-bottom: 8px;">
                 ${this._localize('editor.compact_icons_in_bracket_hint')}
